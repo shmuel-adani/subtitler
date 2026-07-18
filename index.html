@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1220">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>מתרגם כתוביות</title>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1220; --panel:#171a2b; --panel2:#1e2338; --line:#2a3050;
+    --text:#e8ebf5; --muted:#9aa3c0; --accent:#6ea8ff; --accent2:#7bffb0;
+    --danger:#ff7b7b; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 80px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+  label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+  input,select,textarea,button{font-family:inherit;font-size:14px}
+  input[type=text],input[type=password],select{width:100%;padding:11px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > div{flex:1;min-width:170px}
+  .drop{border:2px dashed var(--line);border-radius:var(--radius);padding:26px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
+  .drop:hover,.drop.over{border-color:var(--accent);color:var(--text);background:var(--panel2)}
+  .drop b{color:var(--text)}
+  button.primary{background:linear-gradient(135deg,var(--accent),#4d7fe0);color:#08122b;font-weight:700;border:none;padding:13px 20px;border-radius:11px;cursor:pointer;width:100%}
+  button.primary:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:9px 14px;border-radius:10px;cursor:pointer}
+  .status{font-size:13px;margin-top:12px;min-height:20px}
+  .status.err{color:var(--danger)} .status.ok{color:var(--accent2)}
+  .bar{height:6px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:10px;display:none}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+  video{width:100%;border-radius:12px;background:#000;display:block}
+  .player{position:relative}
+  .overlay{position:absolute;left:0;right:0;bottom:8%;text-align:center;pointer-events:none;padding:0 8%}
+  .overlay span{background:rgba(0,0,0,.72);color:#fff;padding:4px 10px;border-radius:6px;font-size:clamp(15px,2.6vw,24px);line-height:1.5;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .seglist{max-height:340px;overflow:auto;margin-top:6px}
+  .seg{display:flex;gap:10px;align-items:flex-start;padding:8px;border-bottom:1px solid var(--line)}
+  .seg .t{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;white-space:nowrap;cursor:pointer;padding-top:8px}
+  .seg .t:hover{color:var(--accent)}
+  .seg textarea{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:7px;resize:vertical;min-height:38px;direction:rtl}
+  .hidden{display:none}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  a.dl{color:var(--accent);text-decoration:none;font-size:13px;border:1px solid var(--line);padding:8px 12px;border-radius:9px;display:inline-block}
+  .flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .keyrow{display:flex;gap:8px}
+  .keyrow input{flex:1}
+  .chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--muted)}
+  .chk input{width:auto}
+  .banner{background:linear-gradient(135deg,#123a2a,#0f2a3a);border:1px solid #1e5e46;color:var(--accent2);padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px}
+  .settingsHead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:600;color:var(--text)}
+  .settingsHead .sm{font-size:12px;color:var(--muted);font-weight:400}
+  #settingsCard.collapsed #settingsBody{display:none}
+  #settingsBody{margin-top:14px}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  input[type=color]{width:100%;height:40px;padding:3px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+  .styleBox{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>מתרגם כתוביות</h1>
+  <p class="sub">שתפו סרטון מוואטסאפ אל האפליקציה — או בחרו קובץ. הכל קורה במכשיר, המפתח נשאר אצלכם.</p>
+
+  <div class="banner hidden" id="sharedBanner">📥 התקבל סרטון משיתוף — מתחיל אוטומטית…</div>
+
+  <div class="card" id="settingsCard">
+    <div class="settingsHead" id="settingsHead"><span>⚙︎ הגדרות</span><span class="sm" id="settingsHint">הקש לפתיחה</span></div>
+    <div id="settingsBody">
+    <label>מפתח Gemini API</label>
+    <div class="keyrow">
+      <input id="key" type="password" placeholder="AIza..." autocomplete="off">
+      <button class="ghost" id="toggleKey" type="button">הצג</button>
+    </div>
+    <div class="chk"><input type="checkbox" id="remember" checked><label for="remember" style="margin:0">זכור את המפתח במכשיר הזה</label></div>
+    <div class="hint">מפתח חינם ב‑aistudio.google.com/apikey.</div>
+    <div class="row" style="margin-top:14px">
+      <div>
+        <label>שפת יעד</label>
+        <select id="lang">
+          <option value="Hebrew">עברית</option>
+          <option value="English">אנגלית</option>
+          <option value="Arabic">ערבית</option>
+          <option value="Russian">רוסית</option>
+          <option value="Spanish">ספרדית</option>
+          <option value="French">צרפתית</option>
+          <option value="German">גרמנית</option>
+          <option value="Portuguese">פורטוגזית</option>
+        </select>
+      </div>
+      <div>
+        <label>מודל</label>
+        <input id="model" type="text" value="gemini-3.1-flash-lite" list="models">
+        <datalist id="models">
+          <option value="gemini-3.1-flash-lite">מומלץ — איזון עלות/איכות</option>
+          <option value="gemini-2.5-flash-lite">הזול ביותר</option>
+          <option value="gemini-2.5-flash">איכותי יותר</option>
+          <option value="gemini-3-flash">חלופה</option>
+        </datalist>
+      </div>
+    </div>
+    <div class="hint">אם מתקבלת שגיאת 404 — החליפו ל‑gemini-2.5-flash-lite.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>קובץ וידאו</label>
+    <div class="drop" id="drop"><b>לחצו לבחירה</b> או גררו קובץ וידאו</div>
+    <input id="file" type="file" accept="video/*,audio/*" class="hidden">
+    <div id="fileInfo" class="hint"></div>
+    <div style="margin-top:14px"><button class="primary" id="go" disabled>הפקת כתוביות ותרגום</button></div>
+    <div class="bar" id="bar"><i></i></div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card hidden" id="result">
+    <div class="player">
+      <video id="video" controls playsinline></video>
+      <div class="overlay"><span id="cue"></span></div>
+    </div>
+    <div class="flex" style="margin-top:14px">
+      <a class="dl" id="dlVtt" href="#">⬇︎ ‎.vtt</a>
+      <a class="dl" id="dlSrt" href="#">⬇︎ ‎.srt</a>
+      <span class="hint" id="segCount"></span>
+    </div>
+
+    <div class="styleBox">
+      <label>עיצוב ומיקום כתוביות</label>
+      <div class="row">
+        <div>
+          <label>מיקום</label>
+          <select id="stPos">
+            <option value="bottom">תחתית</option>
+            <option value="middle">מרכז</option>
+            <option value="top">עליון</option>
+          </select>
+        </div>
+        <div>
+          <label>מרחק מהקצה (%)</label>
+          <input id="stOffset" type="range" min="0" max="40" value="8">
+        </div>
+        <div>
+          <label>גודל גופן</label>
+          <input id="stSize" type="range" min="3" max="12" step="0.5" value="6">
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div>
+          <label>צבע טקסט</label>
+          <input id="stColor" type="color" value="#ffffff">
+        </div>
+        <div>
+          <label>שקיפות רקע (%)</label>
+          <input id="stBox" type="range" min="0" max="100" value="72">
+        </div>
+        <div>
+          <label>גופן</label>
+          <select id="stFont">
+            <option value="system-ui, Arial, sans-serif">רגיל (Sans)</option>
+            <option value="Georgia, 'Times New Roman', serif">מודגש קלאסי (Serif)</option>
+            <option value="'Courier New', monospace">מכונת כתיבה (Mono)</option>
+          </select>
+        </div>
+      </div>
+      <div class="chk">
+        <input type="checkbox" id="stBold"><label for="stBold" style="margin:0">מודגש</label>
+        <span style="width:16px"></span>
+        <input type="checkbox" id="stOutline" checked><label for="stOutline" style="margin:0">מסגרת/צל לקריאות</label>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <button class="primary" id="burn">⬇︎ הורדת וידאו עם כתוביות מובנות</button>
+      <div class="bar" id="burnBar"><i></i></div>
+      <div class="status" id="burnStatus"></div>
+      <div class="hint">הצריבה קורית בזמן אמת (סרטון של 2 דק' ≈ 2 דק' עיבוד). מתבצע כולו במכשיר.</div>
+    </div>
+
+    <div style="margin-top:14px">
+      <label>עריכת כתוביות (לחיצה על הזמן קופצת בסרטון)</label>
+      <div class="seglist" id="seglist"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const keyEl=$('#key'), rememberEl=$('#remember'), fileEl=$('#file'), drop=$('#drop'), go=$('#go'),
+      statusEl=$('#status'), bar=$('#bar'), barFill=$('#bar > i'),
+      video=$('#video'), cue=$('#cue'), seglist=$('#seglist');
+let chosenFile=null, segments=[], videoURL=null, ffmpeg=null;
+const LS = { get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},
+             set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},
+             del:k=>{try{localStorage.removeItem(k)}catch(e){}} };
+
+/* ---------- key persistence ---------- */
+(function initKey(){
+  const rem = LS.get('remember'); if(rem!==null) rememberEl.checked = rem==='1';
+  const saved = LS.get('gemini_key');
+  if(saved){ keyEl.value=saved; }
+  const savedLang=LS.get('lang'); if(savedLang) $('#lang').value=savedLang;
+  const savedModel=LS.get('model'); if(savedModel) $('#model').value=savedModel;
+})();
+function persistPrefs(){
+  LS.set('remember', rememberEl.checked?'1':'0');
+  if(rememberEl.checked && keyEl.value.trim()) LS.set('gemini_key', keyEl.value.trim());
+  else LS.del('gemini_key');
+  LS.set('lang', $('#lang').value); LS.set('model', $('#model').value.trim());
+  const h=$('#settingsHint'); if(h){ h.textContent='נשמר ✓'; setTimeout(()=>{h.textContent=$('#settingsCard').classList.contains('collapsed')?'הקש לפתיחה':'הקש לסגירה';},1200); }
+}
+/* collapse settings once configured; toggle on tap */
+if(LS.get('gemini_key')){ $('#settingsCard').classList.add('collapsed'); $('#settingsHint').textContent='הקש לפתיחה'; }
+else { $('#settingsHint').textContent='הקש לסגירה'; }
+$('#settingsHead').onclick=()=>{
+  const c=$('#settingsCard').classList.toggle('collapsed');
+  $('#settingsHint').textContent=c?'הקש לפתיחה':'הקש לסגירה';
+};
+keyEl.addEventListener('change', persistPrefs);
+rememberEl.addEventListener('change', persistPrefs);
+$('#lang').addEventListener('change', persistPrefs);
+$('#model').addEventListener('change', persistPrefs);
+
+/* ---------- UI helpers ---------- */
+function setStatus(msg,type){ statusEl.textContent=msg; statusEl.className='status'+(type?' '+type:''); }
+function progress(p){ bar.style.display='block'; barFill.style.width=Math.round(p*100)+'%'; }
+function hideProgress(){ bar.style.display='none'; barFill.style.width='0'; }
+$('#toggleKey').onclick=()=>{ keyEl.type = keyEl.type==='password'?'text':'password'; $('#toggleKey').textContent = keyEl.type==='password'?'הצג':'הסתר'; };
+drop.onclick=()=>fileEl.click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};
+drop.ondragleave=()=>drop.classList.remove('over');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over'); if(e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);};
+fileEl.onchange=e=>{ if(e.target.files[0]) pickFile(e.target.files[0]); };
+function pickFile(f, autorun=true){
+  chosenFile=f; $('#fileInfo').textContent=`${f.name} · ${(f.size/1048576).toFixed(1)}MB`;
+  go.disabled=false; setStatus('');
+  if(autorun && keyEl.value.trim()) run();      // one file pick = straight to translation
+}
+
+/* ---------- Audio extraction ---------- */
+async function loadFFmpeg(){
+  if(ffmpeg) return ffmpeg;
+  const { createFFmpeg } = FFmpeg;
+  ffmpeg = createFFmpeg({ log:false, corePath:'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+  await ffmpeg.load();
+  return ffmpeg;
+}
+async function extractAudio(file){
+  try{
+    setStatus('טוען מנוע חילוץ שמע…');
+    const ff = await loadFFmpeg(); const { fetchFile } = FFmpeg;
+    setStatus('מחלץ שמע מהווידאו…');
+    ff.FS('writeFile','in', await fetchFile(file));
+    await ff.run('-i','in','-vn','-ac','1','-ar','16000','-b:a','40k','out.mp3');
+    const data = ff.FS('readFile','out.mp3'); ff.FS('unlink','in'); ff.FS('unlink','out.mp3');
+    return { bytes:data, mime:'audio/mp3' };
+  }catch(err){
+    console.warn('ffmpeg failed, WebAudio fallback', err);
+    setStatus('חילוץ חלופי (WebAudio)…');
+    return await extractWav(file);
+  }
+}
+async function extractWav(file){
+  const buf = await file.arrayBuffer();
+  const AC = window.AudioContext||window.webkitAudioContext; const ac = new AC();
+  const decoded = await ac.decodeAudioData(buf.slice(0));
+  const off = new OfflineAudioContext(1, Math.max(1,Math.ceil(decoded.duration*16000)), 16000);
+  const src = off.createBufferSource(); src.buffer=decoded; src.connect(off.destination); src.start();
+  const rendered = await off.startRendering();
+  return { bytes: encodeWav(rendered.getChannelData(0),16000), mime:'audio/wav' };
+}
+function encodeWav(samples, rate){
+  const buffer=new ArrayBuffer(44+samples.length*2); const view=new DataView(buffer);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF');view.setUint32(4,36+samples.length*2,true);w(8,'WAVE');w(12,'fmt ');
+  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);
+  view.setUint32(24,rate,true);view.setUint32(28,rate*2,true);view.setUint16(32,2,true);
+  view.setUint16(34,16,true);w(36,'data');view.setUint32(40,samples.length*2,true);
+  let o=44; for(let i=0;i<samples.length;i++){let s=Math.max(-1,Math.min(1,samples[i]));view.setInt16(o,s<0?s*0x8000:s*0x7fff,true);o+=2;}
+  return new Uint8Array(buffer);
+}
+function bytesToBase64(bytes){ let bin='';const chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk){bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));} return btoa(bin); }
+
+/* ---------- Gemini ---------- */
+async function transcribe(audio,key,model,lang){
+  const b64=bytesToBase64(audio.bytes); const approxMB=b64.length/1048576;
+  if(approxMB>18) throw new Error(`השמע גדול מדי לגרסה זו (${approxMB.toFixed(0)}MB). נסו קטע קצר יותר.`);
+  const prompt=`You are a professional subtitle generator. Listen to the audio and produce subtitles TRANSLATED into ${lang}.
+Rules:
+- Transcribe the spoken content, then translate it into ${lang}.
+- Split into short subtitle segments, each at most ~8 words or ~5 seconds.
+- Provide accurate start and end times in SECONDS (numbers, may be decimal).
+- "text" must be ONLY the ${lang} translation, no speaker labels, no notes.
+Return the array of segments.`;
+  const body={ contents:[{parts:[{text:prompt},{inline_data:{mime_type:audio.mime,data:b64}}]}],
+    generationConfig:{ temperature:0.2, responseMimeType:'application/json',
+      responseSchema:{ type:'ARRAY', items:{ type:'OBJECT',
+        properties:{ start:{type:'NUMBER'}, end:{type:'NUMBER'}, text:{type:'STRING'} },
+        required:['start','end','text'] } } } };
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const json=await res.json();
+  if(!res.ok) throw new Error('Gemini: '+(json.error?.message||res.status));
+  const text=json.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!text) throw new Error('Gemini החזיר תשובה ריקה.');
+  let segs=JSON.parse(text);
+  segs=segs.filter(s=>typeof s.start==='number'&&typeof s.end==='number'&&s.text).sort((a,b)=>a.start-b.start);
+  if(!segs.length) throw new Error('לא זוהו קטעי דיבור.');
+  return segs;
+}
+
+/* ---------- Subtitles ---------- */
+function fmt(t,srt){ if(t<0)t=0; const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=Math.floor(t%60),ms=Math.round((t-Math.floor(t))*1000);
+  const p=(n,l=2)=>String(n).padStart(l,'0'); return `${p(h)}:${p(m)}:${p(s)}${srt?',':'.'}${p(ms,3)}`; }
+function toVtt(segs){ return 'WEBVTT\n\n'+segs.map((s,i)=>`${i+1}\n${fmt(s.start)} --> ${fmt(s.end)}\n${s.text}`).join('\n\n')+'\n'; }
+function toSrt(segs){ return segs.map((s,i)=>`${i+1}\n${fmt(s.start,1)} --> ${fmt(s.end,1)}\n${s.text}`).join('\n\n')+'\n'; }
+function download(el,content,name){ const blob=new Blob([content],{type:'text/plain;charset=utf-8'}); el.href=URL.createObjectURL(blob); el.download=name; }
+
+/* ---------- Render ---------- */
+function renderResult(file){
+  if(videoURL) URL.revokeObjectURL(videoURL);
+  videoURL=URL.createObjectURL(file); video.src=videoURL;
+  $('#result').classList.remove('hidden'); $('#segCount').textContent=segments.length+' קטעים';
+  refreshDownloads(); renderSegList(); applyStyle(); $('#result').scrollIntoView({behavior:'smooth'});
+  const p=video.play(); if(p&&p.catch) p.catch(()=>{});   // try to auto-play the result
+}
+function renderSegList(){
+  seglist.innerHTML='';
+  segments.forEach((s,i)=>{
+    const row=document.createElement('div'); row.className='seg';
+    const t=document.createElement('div'); t.className='t'; t.textContent=fmt(s.start).slice(3,8);
+    t.onclick=()=>{ video.currentTime=s.start; video.play(); };
+    const ta=document.createElement('textarea'); ta.value=s.text; ta.rows=1;
+    ta.oninput=()=>{ segments[i].text=ta.value; refreshDownloads(); };
+    row.appendChild(t); row.appendChild(ta); seglist.appendChild(row);
+  });
+}
+function refreshDownloads(){
+  const base=(chosenFile.name||'subtitles').replace(/\.[^.]+$/,'');
+  download($('#dlVtt'), toVtt(segments), base+'.vtt');
+  download($('#dlSrt'), toSrt(segments), base+'.srt');
+}
+video.addEventListener('timeupdate',()=>{ const t=video.currentTime; const seg=segments.find(s=>t>=s.start&&t<=s.end); cue.textContent=seg?seg.text:''; });
+video.addEventListener('loadedmetadata',applyStyle);
+
+/* ---------- Subtitle styling ---------- */
+const STYLE_KEYS=['stPos','stOffset','stSize','stColor','stBox','stFont','stBold','stOutline'];
+function readStyle(){
+  return { pos:$('#stPos').value, offset:+$('#stOffset').value, size:+$('#stSize').value,
+    color:$('#stColor').value, box:+$('#stBox').value, font:$('#stFont').value,
+    bold:$('#stBold').checked, outline:$('#stOutline').checked };
+}
+function applyStyle(){
+  const s=readStyle(); const ov=document.querySelector('.overlay');
+  ov.style.top=''; ov.style.bottom=''; ov.style.transform='';
+  if(s.pos==='bottom') ov.style.bottom=s.offset+'%';
+  else if(s.pos==='top') ov.style.top=s.offset+'%';
+  else { ov.style.top='50%'; ov.style.transform='translateY(-50%)'; }
+  const h=video.clientHeight||360;
+  cue.style.color=s.color;
+  cue.style.background=s.box>0?`rgba(0,0,0,${s.box/100})`:'transparent';
+  cue.style.fontWeight=s.bold?'700':'400';
+  cue.style.fontFamily=s.font;
+  cue.style.fontSize=Math.round(h*s.size/100)+'px';
+  cue.style.textShadow=s.outline?'0 1px 2px #000,0 0 4px #000':'none';
+  cue.style.padding=s.box>0?'2px 10px':'0';
+  try{ LS.set('style', JSON.stringify(s)); }catch(e){}
+}
+function loadStyle(){
+  let s=null; try{ s=JSON.parse(LS.get('style')||'null'); }catch(e){}
+  if(s){
+    $('#stPos').value=s.pos||'bottom'; $('#stOffset').value=s.offset??8; $('#stSize').value=s.size??6;
+    $('#stColor').value=s.color||'#ffffff'; $('#stBox').value=s.box??72;
+    if(s.font)$('#stFont').value=s.font; $('#stBold').checked=!!s.bold; $('#stOutline').checked=s.outline!==false;
+  }
+  STYLE_KEYS.forEach(id=>$('#'+id).addEventListener('input',applyStyle));
+  applyStyle();
+}
+window.addEventListener('resize',applyStyle);
+loadStyle();
+
+/* ---------- Burn subtitles into the video ---------- */
+function pickMime(){
+  const c=['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  for(const m of c){ try{ if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m)) return m; }catch(e){} }
+  return 'video/webm';
+}
+function activeText(t){ const seg=segments.find(s=>t>=s.start&&t<=s.end); return seg?seg.text:''; }
+function drawSub(ctx,cw,ch,text,s){
+  if(!text) return;
+  const fontpx=Math.round(ch*s.size/100);
+  ctx.font=(s.bold?'bold ':'')+fontpx+'px '+s.font;
+  ctx.textAlign='center'; ctx.direction='rtl'; ctx.textBaseline='middle';
+  const maxW=cw*0.9, words=text.split(/\s+/), lines=[]; let line='';
+  for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w;} else line=test; }
+  if(line) lines.push(line);
+  const lineH=fontpx*1.3, totalH=lines.length*lineH;
+  let blockTop;
+  if(s.pos==='bottom') blockTop=ch*(1-s.offset/100)-totalH;
+  else if(s.pos==='top') blockTop=ch*(s.offset/100);
+  else blockTop=ch/2-totalH/2;
+  const cx=cw/2, padX=fontpx*0.45;
+  lines.forEach((ln,i)=>{
+    const y=blockTop+i*lineH+lineH/2, w=ctx.measureText(ln).width;
+    if(s.box>0){
+      ctx.fillStyle=`rgba(0,0,0,${s.box/100})`;
+      const rx=cx-w/2-padX, ry=y-lineH/2, rw=w+padX*2, rh=lineH, r=Math.min(10,rh/3);
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(rx,ry,rw,rh,r); else ctx.rect(rx,ry,rw,rh);
+      ctx.fill();
+    }
+    if(s.outline){ ctx.lineWidth=Math.max(2,fontpx*0.08); ctx.strokeStyle='rgba(0,0,0,0.85)'; ctx.lineJoin='round'; ctx.strokeText(ln,cx,y); }
+    ctx.fillStyle=s.color; ctx.fillText(ln,cx,y);
+  });
+}
+async function burn(){
+  if(!segments.length) return;
+  const s=readStyle();
+  const btn=$('#burn'), bs=$('#burnStatus'), bb=$('#burnBar'), bf=$('#burnBar > i');
+  const cw=video.videoWidth, ch=video.videoHeight;
+  if(!cw||!ch){ bs.className='status err'; bs.textContent='הווידאו עדיין נטען — נסו שוב בעוד רגע.'; return; }
+  btn.disabled=true; bs.className='status'; bs.textContent='מכין…'; bb.style.display='block'; bf.style.width='0';
+  try{
+    const canvas=document.createElement('canvas'); canvas.width=cw; canvas.height=ch;
+    const ctx=canvas.getContext('2d');
+    const cStream=canvas.captureStream(30);
+    let aTracks=[];
+    try{ const vs=video.captureStream?video.captureStream():(video.mozCaptureStream?video.mozCaptureStream():null); if(vs) aTracks=vs.getAudioTracks(); }catch(e){}
+    const mixed=new MediaStream();
+    cStream.getVideoTracks().forEach(t=>mixed.addTrack(t));
+    aTracks.forEach(t=>mixed.addTrack(t));
+    const mime=pickMime();
+    const rec=new MediaRecorder(mixed,{mimeType:mime,videoBitsPerSecond:6000000});
+    const chunks=[]; rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+    const stopped=new Promise(r=>rec.onstop=r);
+    video.pause();
+    await new Promise(r=>{ const h=()=>{video.removeEventListener('seeked',h);r();}; video.addEventListener('seeked',h); video.currentTime=0; });
+    const wasMuted=video.muted; video.muted=true;
+    bs.textContent='מקליט וידאו עם כתוביות (בזמן אמת)…';
+    let raf;
+    const loop=()=>{ ctx.drawImage(video,0,0,cw,ch); drawSub(ctx,cw,ch,activeText(video.currentTime),s);
+      if(video.duration&&isFinite(video.duration)) bf.style.width=Math.min(100,Math.round(video.currentTime/video.duration*100))+'%';
+      raf=requestAnimationFrame(loop); };
+    rec.start(); loop();
+    await video.play();
+    await new Promise(r=>{ const h=()=>{video.removeEventListener('ended',h);r();}; video.addEventListener('ended',h); });
+    cancelAnimationFrame(raf); rec.stop(); await stopped;
+    video.muted=wasMuted;
+    const blob=new Blob(chunks,{type:mime});
+    const ext=mime.indexOf('mp4')>=0?'mp4':'webm';
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=(chosenFile.name||'video').replace(/\.[^.]+$/,'')+'.subtitled.'+ext; a.click();
+    bs.className='status ok';
+    bs.textContent=`הורד! (${ext}, ${(blob.size/1048576).toFixed(1)}MB)`+(ext==='webm'?' — פורמט webm. לשיתוף בוואטסאפ ייתכן שתעדיפו mp4 (המרה = צעד הבא).':'');
+  }catch(err){ console.error(err); bs.className='status err'; bs.textContent='שגיאה: '+err.message; }
+  finally{ btn.disabled=false; setTimeout(()=>{bb.style.display='none';},900); }
+}
+$('#burn').onclick=burn;
+
+/* ---------- Main ---------- */
+async function run(){
+  const key=keyEl.value.trim();
+  if(!key){ setStatus('נא להזין מפתח Gemini API.','err'); return; }
+  if(!chosenFile){ setStatus('נא לבחור קובץ וידאו.','err'); return; }
+  persistPrefs(); go.disabled=true;
+  try{
+    progress(0.15);
+    const audio=await extractAudio(chosenFile); progress(0.5);
+    setStatus('שולח ל‑Gemini לתרגום וחתימות זמן…');
+    segments=await transcribe(audio,key,$('#model').value.trim()||'gemini-3.1-flash-lite',$('#lang').value);
+    progress(1); setStatus(`הצלחה — ${segments.length} קטעי כתוביות.`,'ok'); renderResult(chosenFile);
+  }catch(err){ console.error(err); setStatus('שגיאה: '+err.message,'err'); }
+  finally{ go.disabled=false; setTimeout(hideProgress,600); }
+}
+go.onclick=run;
+
+/* ---------- Shared file from WhatsApp (Share Target) ---------- */
+async function handleSharedMedia(){
+  try{
+    const cache=await caches.open('shared');
+    const res=await cache.match('shared-media');
+    if(!res) return;
+    const blob=await res.blob();
+    const name=decodeURIComponent(res.headers.get('X-Filename')||'whatsapp-video.mp4');
+    await cache.delete('shared-media');
+    const file=new File([blob], name, {type:blob.type||'video/mp4'});
+    $('#sharedBanner').classList.remove('hidden');
+    pickFile(file, false);                        // don't double-run
+    if(keyEl.value.trim()){ run(); }              // auto-start if key is saved
+    else { $('#settingsCard').classList.remove('collapsed'); $('#settingsHint').textContent='הקש לסגירה'; setStatus('הכניסו מפתח Gemini פעם אחת כדי להתחיל.','err'); }
+  }catch(e){ console.warn('share pickup failed', e); }
+}
+
+/* ---------- PWA boot ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(()=>{
+      if(new URLSearchParams(location.search).get('shared')==='1'){
+        // give the SW a beat to finish caching the shared file
+        setTimeout(handleSharedMedia, 300);
+      }
+    }).catch(err=>console.warn('SW register failed',err));
+  });
+}
+</script>
+</body>
+</html>
