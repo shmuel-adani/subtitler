@@ -92,10 +92,11 @@ export const actions = {
     return { patch: { hour: s.hour + 1 } };
   },
 
-  certify(s, role, { answers, order }) {
+  certify(s, role, { answers }) {
     if (role !== 'k') return { error: 'רק הכהן נבחן.' };
     if (Date.now() < s.cert.lockUntil) return { error: 'המתן מעט, ועיין שוב בספר.' };
-    const ok = order.every((shade, i) => answers[i] === shade);
+    const order = certOrder(s.cert.seed);
+    const ok = Array.isArray(answers) && order.every((shade, i) => answers[i] === shade);
     if (!ok) {
       return {
         patch: { cert: { tries: s.cert.tries + 1, lockUntil: Date.now() + 20000, seed: s.cert.seed + 7 }, penalty: s.penalty + 2 },
