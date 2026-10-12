@@ -69,7 +69,7 @@ function renderLobby(phase, msg = '') {
         <button class="btn gold lg" id="newRoom">פתח חדר חדש</button>
         <form class="join" id="joinForm"><label for="joinCode">יש לך קוד חדר?</label><div class="join-row"><input id="joinCode" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD" inputmode="latin" dir="ltr"><button class="btn ghost" type="submit">הצטרף</button></div></form>
       </div>
-      <p class="net-note">${online ? 'מחובר. שני השחקנים צריכים גישת עריכה לעמוד הזה כדי לשחק יחד.' : 'מצב מקומי: אפשר לשחק בשתי לשוניות באותו דפדפן. לשחק משני מכשירים, פתחו את העמוד דרך הקישור המשותף.'}</p>`}
+      <p class="net-note">${app.net?.kind === 'server' ? 'מחובר לשרת. שלחו לשחקן השני את כתובת האתר ואת קוד החדר.' : online ? 'מחובר. שני השחקנים צריכים גישת עריכה לעמוד הזה כדי לשחק יחד.' : 'מצב מקומי: אפשר לשחק בשתי לשוניות באותו דפדפן. לשחק משני מכשירים, פתחו את העמוד דרך הקישור המשותף.'}</p>`}
       ${msg ? `<p class="status bad">${esc(msg)}</p>` : ''}
     </div></section>`;
   if (phase === 'connecting') return;
@@ -339,7 +339,7 @@ function openMenu() {
     <p>אתה משחק בתור <b>${esc(ROLES[app.role].name)}</b> בחדר <b dir="ltr">${esc(app.code)}</b>.</p>
     <p class="dim">כדי שהשחקן השני יצטרף, שלח לו את הקישור לעמוד ואת קוד החדר.</p>
     <div class="menu-btns"><button class="btn ghost" id="mLeave">צא לתפריט הראשי</button></div>
-    <p class="dim small">${app.net.kind === 'online' ? 'המשחק מסונכרן דרך השרת.' : 'מצב מקומי: הסנכרון פועל בין לשוניות של אותו דפדפן.'}</p></div>` });
+    <p class="dim small">${app.net.kind !== 'local' ? 'המשחק מסונכרן דרך השרת.' : 'מצב מקומי: הסנכרון פועל בין לשוניות של אותו דפדפן.'}</p></div>` });
   sh.body.querySelector('#mLeave').addEventListener('click', () => {
     try { sessionStorage.removeItem('machane-session'); } catch (e) { /* ok */ }
     location.reload();

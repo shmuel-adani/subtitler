@@ -19,7 +19,49 @@ export async function connect() {
   try {
     if (window.claude && typeof window.claude.use === 'function') db = await withTimeout(window.claude.use('db'), 7000);
   } catch (e) { db = null; }
-  return db ? dbTransport(db) : localTransport();
+  if (db) return dbTransport(db);
+  if (await hasServer()) return serverTransport();
+  return localTransport();
+}
+
+async function hasServer() {
+  if (!/^https?:$/.test(location.protocol)) return false;
+  try {
+    const r = await withTimeout(fetch('api/health', { cache: 'no-store' }), 3000);
+    return !!(r && r.ok && (await r.json()).ok);
+  } catch (e) { return false; }
+}
+
+// ------------------------------------------------------------------ own server
+// The bundled Node server (server/server.mjs): JSON over HTTP, live updates over Server-Sent Events.
+function serverTransport() {
+  const base = 'api/games/';
+  let inflight = Promise.resolve();
+  const post = async (url, body) => {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error('server ' + r.status);
+    return r.json();
+  };
+  return {
+    kind: 'server',
+    async load(code) {
+      const r = await fetch(base + code, { cache: 'no-store' });
+      return r.ok ? r.json() : null;
+    },
+    async create(code, state) { await post(base + code, state); },
+    subscribe(code, cb, onErr) {
+      const es = new EventSource(base + code + '/events');
+      es.onmessage = (e) => { try { cb(JSON.parse(e.data)); } catch (x) { /* ignore */ } };
+      let fails = 0;
+      es.onopen = () => { fails = 0; };
+      es.onerror = () => { if (++fails > 20 && onErr) onErr(new Error('disconnected')); };
+      return () => es.close();
+    },
+    patch(code, patch) {
+      inflight = inflight.catch(() => {}).then(() => post(base + code + '/patch', patch));
+      return inflight;
+    },
+  };
 }
 
 // ------------------------------------------------------------------ online

@@ -1,0 +1,16 @@
+# Example systemd unit. Copy to /etc/systemd/system/machane.service,
+# adjust the paths and user, then: systemctl enable --now machane
+[Unit]
+Description=Machane escape room server
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/machane
+ExecStart=/usr/bin/node server/server.mjs
+Environment=PORT=8080
+Environment=DATA_DIR=/var/lib/machane
+Restart=always
+User=www-data
+
+[Install]
+WantedBy=multi-user.target
