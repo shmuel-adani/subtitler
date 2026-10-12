@@ -149,6 +149,10 @@ const server = createServer(async (req, res) => {
   }
 });
 
+if (!existsSync(join(PUBLIC, 'index.html'))) {
+  console.error('dist/index.html is missing. Run "npm install" (it builds the game) or "npm run build" first.');
+  process.exit(1);
+}
 await load();
 server.listen(PORT, () => console.log(`מחוץ למחנה: http://localhost:${PORT}`));
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => {

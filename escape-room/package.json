@@ -4,11 +4,15 @@
   "private": true,
   "description": "מחוץ למחנה: חדר בריחה לשני שחקנים על טהרת המצורע",
   "type": "module",
-  "engines": { "node": ">=18" },
-  "scripts": {
-    "build": "node build.mjs",
-    "start": "node server/server.mjs",
-    "dev": "node build.mjs && node server/server.mjs"
+  "engines": {
+    "node": ">=18"
   },
-  "devDependencies": { "esbuild": "0.24.0" }
+  "scripts": {
+    "postinstall": "node build.mjs",
+    "build": "node build.mjs",
+    "start": "node server/server.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
 }

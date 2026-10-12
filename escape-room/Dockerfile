@@ -1,11 +1,9 @@
 # Builds the game and runs the bundled server. The image has no runtime dependencies.
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json ./
-RUN npm install --no-audit --no-fund
-COPY build.mjs template.html ./
+COPY package.json build.mjs template.html ./
 COPY src ./src
-RUN node build.mjs
+RUN npm install --no-audit --no-fund
 
 FROM node:20-alpine
 WORKDIR /app
