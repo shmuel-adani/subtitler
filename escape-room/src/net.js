@@ -1,7 +1,7 @@
 // Shared game state between the two players.
-// Two transports with one interface: the claude.ai artifact database (online, live),
+// Three transports with one interface, picked automatically by connect():
+// the bundled server (server/server.mjs), the claude.ai artifact database,
 // and a local fallback (BroadcastChannel + localStorage) for two tabs in one browser.
-// The production server will be a third transport with the same interface.
 
 export function deepMerge(base, patch) {
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return patch;
